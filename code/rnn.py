@@ -19,9 +19,23 @@ class MyRNN(tf.keras.Model):
         super().__init__()
 
         self.vocab_size = vocab_size
-        self.rnn_size = rnn_size
+        self.rnn_size = rnn_size # window size 
         self.embed_size = embed_size
 
+        self.lr = .001
+
+        self.tf_embedding_table = tf.keras.layers.Embedding(self.vocab_size, self.embed_size)
+
+        self.dense = tf.keras.layers.Dense(
+            self.vocab_size, activation='leaky_relu') # make even bigger? 
+        self.dense2 = tf.keras.layers.Dense(self.vocab_size, activation='softmax')
+
+        self.seq = tf.keras.Sequential([self.dense, self.dense2])
+
+        self.loss = tf.keras.losses.SparseCategoricalCrossentropy()
+
+        self.LSTM = tf.keras.layers.LSTM(self.embed_size, return_sequences=True) # what goes in here
+       
         ## TODO:
         ## - Define an embedding component to embed the word indices into a trainable embedding space.
         ## - Define a recurrent component to reason with the sequence of data. 
@@ -32,7 +46,16 @@ class MyRNN(tf.keras.Model):
         - You must use an embedding layer as the first layer of your network (i.e. tf.nn.embedding_lookup or tf.keras.layers.Embedding)
         - You must use an LSTM or GRU as the next layer.
         """
-        return inputs
+
+        # inputs = (None,)
+
+        embed = self.tf_embedding_table(inputs) # (None, 128, 64)
+
+        output = self.LSTM(embed, initial_state = None) # (None, 64)
+
+        output = self.seq(output) # (None, self.vocab_size)
+
+        return output
 
     ##########################################################################################
 
@@ -45,7 +68,7 @@ class MyRNN(tf.keras.Model):
 
         first_string = word1
         first_word_index = vocab[word1]
-        next_input = [[first_word_index]]
+        next_input = np.array([[first_word_index]])
         text = [first_string]
 
         for i in range(length):
@@ -56,7 +79,7 @@ class MyRNN(tf.keras.Model):
             out_index = np.random.choice(top_n,p=n_logits)
 
             text.append(reverse_vocab[out_index])
-            next_input = [[out_index]]
+            next_input = np.array([[out_index]])
 
         print(" ".join(text))
 
@@ -74,12 +97,15 @@ def get_text_model(vocab):
     model = MyRNN(len(vocab))
 
     ## TODO: Define your own loss and metric for your optimizer
-    loss_metric = None 
-    acc_metric  = None
+    loss_metric = model.loss 
+    def perplexity(y_true, y_pred):
+        #loss = tf.keras.losses.SparseCategoricalCrossentropy()
+        return tf.math.exp(tf.reduce_mean(loss_metric(y_true, y_pred)))
+    acc_metric = perplexity
 
     ## TODO: Compile your model using your choice of optimizer, loss, and metrics
     model.compile(
-        optimizer=None, 
+        optimizer=tf.keras.optimizers.Adam(learning_rate=model.lr), 
         loss=loss_metric, 
         metrics=[acc_metric],
     )
@@ -101,18 +127,33 @@ def main():
     ##   from train_x and test_x. You also need to drop the first element from train_y and test_y.
     ##   If you don't do this, you will see very, very small perplexities.
     ##   HINT: You might be able to find this somewhere...
-    vocab = None
+    train_id, test_id, vocab = get_data("../data/train.txt", "../data/test.txt")
 
-    X0, Y0  = None, None
-    X1, Y1  = None, None
+    train_id = np.array(train_id)
+    test_id  = np.array(test_id)
+    X0, Y0 = train_id[:-1], train_id[1:] # (1465613,) (1465613,)
+    X1, Y1  = test_id[:-1],  test_id[1:] # (361911,) (361911,)
 
+    window_size = 20
+    
+    # is it okay to hard code this in
+    X0, Y0 = X0[:-13], Y0[:-13]
+    X1, Y1 = X1[:-11], Y1[:-11]
+
+    X0 = tf.reshape(X0, [-1, window_size])
+    Y0 = tf.reshape(Y0, [-1, window_size])
+    X1 = tf.reshape(X1, [-1, window_size])
+    Y1 = tf.reshape(Y1, [-1, window_size])
+
+    print(X0.shape)
+    print(Y0.shape)
     ## TODO: Get your model that you'd like to use
-    args = get_text_model(vocab)
+    args = get_text_model(vocab) # len(vocab) = 4962
 
     args.model.fit(
         X0, Y0,
         epochs=args.epochs, 
-        batch_size=args.batch_size,
+        batch_size=args.batch_size, # 100
         validation_data=(X1, Y1)
     )
 
