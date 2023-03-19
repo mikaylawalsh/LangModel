@@ -22,12 +22,12 @@ class MyRNN(tf.keras.Model):
         self.rnn_size = rnn_size # window size 
         self.embed_size = embed_size
 
-        self.lr = .001
+        self.lr = .005
 
         self.tf_embedding_table = tf.keras.layers.Embedding(self.vocab_size, self.embed_size)
 
         self.dense = tf.keras.layers.Dense(
-            self.vocab_size, activation='leaky_relu') # make even bigger? 
+            500, activation='leaky_relu') # make even bigger? 
         self.dense2 = tf.keras.layers.Dense(self.vocab_size, activation='softmax')
 
         self.seq = tf.keras.Sequential([self.dense, self.dense2])
@@ -113,7 +113,7 @@ def get_text_model(vocab):
     return SimpleNamespace(
         model = model,
         epochs = 1,
-        batch_size = 100,
+        batch_size = 256,
     )
 
 
@@ -145,8 +145,6 @@ def main():
     X1 = tf.reshape(X1, [-1, window_size])
     Y1 = tf.reshape(Y1, [-1, window_size])
 
-    print(X0.shape)
-    print(Y0.shape)
     ## TODO: Get your model that you'd like to use
     args = get_text_model(vocab) # len(vocab) = 4962
 
