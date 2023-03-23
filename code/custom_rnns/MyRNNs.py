@@ -46,9 +46,9 @@ class MyLSTM(tf.keras.layers.Layer):
             ct = tf.zeros(shape=(inputs.shape[0], self.units), dtype=tf.float32)
          
         W, U, b, units = self.kernel, self.recurrent_kernel, self.bias, self.units
-        W_f, W_i, W_c, W_o = (W[:, :units], W[:, units:(2*units)], W[:, (2*units):(3*units)], W[:, (3*units):])
-        U_f, U_i, U_c, U_o = (U[:, :units], U[:, units:(2*units)], U[:, (2*units):(3*units)], U[:, (3*units):])
-        b_f, b_i, b_c, b_o = (b[:units], b[units:(units*2)], b[(units*2):(units*3)], b[(units*3):])
+        W_i, W_f, W_c, W_o = (W[:, :units], W[:, units:(2*units)], W[:, (2*units):(3*units)], W[:, (3*units):])
+        U_i, U_f, U_c, U_o = (U[:, :units], U[:, units:(2*units)], U[:, (2*units):(3*units)], U[:, (3*units):])
+        b_i, b_f, b_c, b_o = (b[:units], b[units:(units*2)], b[(units*2):(units*3)], b[(units*3):])
 
         outputs = [] ## we need the whole sequence of outputs
         inputs_time_major = tf.transpose(inputs, perm = [1, 0, 2]) ## swap the batch and timestep axes
